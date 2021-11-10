@@ -62,8 +62,37 @@ read_word_list(Ws) :-
 
 parse(List):-write("Enter what you want to eat"),read_word_list(IN), extract_words(IN,List),write(List).
 
+%%%%%%%%%%%%%%%%%
+%%Compare Nouns%%
+%%%%%%%%%%%%%%%%%
+category_selection(List):-features_cats(SampleList),Score = 0,get_cat(List,BestCategory,Score,SampleList,ResultCat,ResultScore),write(ResultCat),write(ResultScore).
 
+get_cat(_,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
+    AllCategories=[],ResultScore = BestScore,ResultCat=BestCategory.
 
+get_cat(List,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
+    Score = 0,
+    AllCategories=[Selected|Tail],
+    Selected = [TrialCategory,TrialFeatures|_],
+    compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,Out,NewBestScore),
+    get_cat(List,Out,NewBestScore,Tail,ResultCat,ResultScore).
+
+%%Base case for compare
+compare_features(List,TrialCategory,_,Score,BestScore,BestCategory,Out,NewBestScore):- 
+    List = [],Score > BestScore, Out = TrialCategory,NewBestScore is Score.
+compare_features(List,TrialCategory,_,Score,BestScore,BestCategory,Out,NewBestScore):- 
+    List = [],Score is BestScore, Out = BestCategory,NewBestScore is Score.
+compare_features(List,TrialCategory,_,Score,BestScore,BestCategory,Out,NewBestScore):- 
+    List = [],Score < BestScore, Out = BestCategory, NewBestScore is BestScore.
+%%Check the first element of the list and pass in the next
+compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,Out,NewBestScore):-
+    List = [Feature|Tail],
+    member(Feature,TrialFeatures),NewScore is Score + 1,
+    compare_features(Tail,TrialCategory,TrialFeatures,NewScore,BestScore,BestCategory,Out,NewBestScore).
+compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,Out,NewBestScore):-
+    List = [Feature|Tail],
+    \+member(Feature,TrialFeatures),NewScore is Score,
+    compare_features(Tail,TrialCategory,TrialFeatures,NewScore,BestScore,BestCategory,Out,NewBestScore).
 %%%%%%%%%%%%%%%%%
 %%Extract Nouns%%
 %%%%%%%%%%%%%%%%%
@@ -180,6 +209,17 @@ merge_duplicates([], []).
 %%Knowledge base form%
 %%%%%%%%%%%%%%%%%%%%%%
 
+%%Features of categories in the form of a list with [Category,[features]]
+features_cats([
+    [american,[burger,wings,steak,beef,chickern]],
+    [chinese, [chicken,dumplings,noodles,rice,beef]],
+    [japanese,[sushi,seafood,rice]],
+    [italian, [pizza,pasta]],
+    [mexican, [tacos,burritos,rice]]
+]
+).
+
+
 american(buffalowildwings).
 american(applebees).
 american(mcdonalds).
@@ -189,16 +229,16 @@ american(kfc).
 american(cheesecakefactory).
 american(texasroadhouse).
 
-chineese(pfchangs).
-chineese(pandaexpress).
-chineese(chowcity).
-chineese(kq).
+chinese(pfchangs).
+chinese(pandaexpress).
+chinese(chowcity).
+chinese(kq).
 
-japaneese(koto).
-japaneese(kiyomi).
-japaneese(snakebomb).
-japaneese(oceansushi).
-japaneese(ichiro).
+japanese(koto).
+japanese(kiyomi).
+japanese(snakebomb).
+japanese(oceansushi).
+japanese(ichiro).
 
 italian(olivegarden).
 italian(carrabbas).
