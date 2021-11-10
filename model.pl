@@ -32,7 +32,7 @@ propnoun(pn(i))-->[i].
 
 comma(comma(',')) -->[',']. 
 %%adj(a()) --> [].
-adj(a(spicy)) --> [spicy].
+adj(adj(spicy)) --> [spicy].
 
 
 %%noun(n()) -->[].
@@ -53,12 +53,41 @@ dot -->[].
 %%%Utils%%%
 %%%%%%%%%%%
 
+
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
     atom_codes(A,Cs),
     tokenize_atom(A,Ws).
 
-parse():-read_word_list(IN),sentence(Parse,IN,[]),write(Parse).
+
+parse(List):-write("Enter what you want to eat"),read_word_list(IN), extract_words(IN,List),write(List).
+
+
+
+%%%%%%%%%%%%%%%%%
+%%Extract Nouns%%
+%%%%%%%%%%%%%%%%%
+extract_words(In,List):- sentence(Parse,IN,[]),extract(Parse,_,NP),write(NP),retrieve([NP],List).
+
+extract(s(vp(pn(i),v(Verb), NounPhrase)), Verb, NounPhrase).
+extract(s(vp(pn(i),v(Verb),d(a), NounPhrase)), Verb, NounPhrase).
+extract(np(adjp(Adjp),n(Noun)),Adjp,Noun).
+extract(np(det(a),n(Noun)),Noun).
+extract(np(n(Noun)),Noun).
+extract(np(n(Noun),c(and),NounPhrase),Noun,NounPhrase).
+
+%%Base case
+retrieve(NounPhrases,Out):- write("basecase"),nl,NounPhrases=[],Out=[].
+%%noun is by its self
+retrieve(NounPhrases,Out):-write("noun extract"),nl,
+   NounPhrases=[Noun|Tail],\+extract(Noun,_),\+extract(Noun,_,_),write(Tail),nl,retrieve(Tail,NewList),Out=[Noun|NewList].
+%%two noun phrases inside an np
+retrieve(NounPhrases,Out):-write("2 np case"),nl,
+    NounPhrases=[NP|Tail],extract(NP,NewNp1,NewNp2),append([NewNp1],Tail,Temp1),append([NewNp2],Temp1,Temp2),write(Temp2),nl,retrieve(Temp2,Out).
+%%one noun phrase inside an np
+retrieve(NounPhrases,Out):-write("1 np case"),nl,
+    NounPhrases=[NP|Tail],extract(NP,NewNp),append([NewNp],Tail,Temp1),write(Temp1),nl,retrieve(Temp1,Out).
+
 
 %%%%%%%%%%%%%%%%%%%
 %%% Origin Sets %%%
@@ -146,6 +175,60 @@ merge_duplicates([], []).
 %%%%%%%%%%%%%%%%%%%%%%
 %%%   Model Code   %%%
 %%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%Knowledge base form%
+%%%%%%%%%%%%%%%%%%%%%%
+
+american(buffalowildwings).
+american(applebees).
+american(mcdonalds).
+american(rubytuesdays).
+american(chickfila).
+american(kfc).
+american(cheesecakefactory).
+american(texasroadhouse).
+
+chineese(pfchangs).
+chineese(pandaexpress).
+chineese(chowcity).
+chineese(kq).
+
+japaneese(koto).
+japaneese(kiyomi).
+japaneese(snakebomb).
+japaneese(oceansushi).
+japaneese(ichiro).
+
+italian(olivegarden).
+italian(carrabbas).
+italian(bucadibeppo).
+italian(pizzahut).
+italian(dominos).
+
+mexican(tacobell).
+mexican(chipotle).
+mexican(fajitagrill).
+mexican(aztecha).
+mexican(laparrila).
+
+expensive(texasroadhouse).
+expensive(cheesecakefactory).
+expensive(pfchangs).
+
+normalprice(buffalowildwings).
+normalprice(applebees).
+normalprice(chickfila).
+normalprice(pandaexpress).
+normalprice(kiyomi).
+normalprice(koto).
+normalprice(olivegarden).
+normalprice(carrabbas).
+normalprice(chipotle).
+normalprice(fajitagrill).
+
+cheap(mcdonalds).
+
 
 test:- assert_hyps([if(category(american),not(category(mexican))),if(category(mexican),not(category(american)))],[],KB).
     
