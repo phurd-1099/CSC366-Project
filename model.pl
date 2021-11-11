@@ -43,11 +43,16 @@ noun(n(wings)) -->[wings].
 noun(n(steak)) -->[steak].
 noun(n(beef)) -->[beef].
 noun(n(chineese)) -->[chineese].
+noun(n(rice))-->[rice].
 
 dot --> ['.'].
 dot -->[].
 
+%%%%%%%%%%%
+%%%Test %%%
+%%%%%%%%%%%
 
+testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Selected: "),write(ResultCat),nl,write("Score: "),write(ResultScore).
 
 %%%%%%%%%%%
 %%%Utils%%%
@@ -60,12 +65,12 @@ read_word_list(Ws) :-
     tokenize_atom(A,Ws).
 
 
-parse(List):-write("Enter what you want to eat"),read_word_list(IN), extract_words(IN,List),write(List).
+parse(List):-write("Enter what you want to eat"),nl,read_word_list(IN), extract_words(IN,List).
 
 %%%%%%%%%%%%%%%%%
 %%Compare Nouns%%
 %%%%%%%%%%%%%%%%%
-category_selection(List):-features_cats(SampleList),Score = 0,get_cat(List,BestCategory,Score,SampleList,ResultCat,ResultScore),write(ResultCat),write(ResultScore).
+category_selection(List,ResultCat,ResultScore):-features_cats(SampleList),Score = 0,get_cat(List,BestCategory,Score,SampleList,ResultCat,ResultScore).
 
 get_cat(_,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
     AllCategories=[],ResultScore = BestScore,ResultCat=BestCategory.
@@ -96,7 +101,7 @@ compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,O
 %%%%%%%%%%%%%%%%%
 %%Extract Nouns%%
 %%%%%%%%%%%%%%%%%
-extract_words(In,List):- sentence(Parse,IN,[]),extract(Parse,_,NP),write(NP),retrieve([NP],List).
+extract_words(In,List):- sentence(Parse,In,[]),extract(Parse,_,NP),retrieve([NP],List).
 
 extract(s(vp(pn(i),v(Verb), NounPhrase)), Verb, NounPhrase).
 extract(s(vp(pn(i),v(Verb),d(a), NounPhrase)), Verb, NounPhrase).
@@ -106,16 +111,16 @@ extract(np(n(Noun)),Noun).
 extract(np(n(Noun),c(and),NounPhrase),Noun,NounPhrase).
 
 %%Base case
-retrieve(NounPhrases,Out):- write("basecase"),nl,NounPhrases=[],Out=[].
+retrieve(NounPhrases,Out):- NounPhrases=[],Out=[].
 %%noun is by its self
-retrieve(NounPhrases,Out):-write("noun extract"),nl,
-   NounPhrases=[Noun|Tail],\+extract(Noun,_),\+extract(Noun,_,_),write(Tail),nl,retrieve(Tail,NewList),Out=[Noun|NewList].
+retrieve(NounPhrases,Out):-
+   NounPhrases=[Noun|Tail],\+extract(Noun,_),\+extract(Noun,_,_),retrieve(Tail,NewList),Out=[Noun|NewList].
 %%two noun phrases inside an np
-retrieve(NounPhrases,Out):-write("2 np case"),nl,
-    NounPhrases=[NP|Tail],extract(NP,NewNp1,NewNp2),append([NewNp1],Tail,Temp1),append([NewNp2],Temp1,Temp2),write(Temp2),nl,retrieve(Temp2,Out).
+retrieve(NounPhrases,Out):-
+    NounPhrases=[NP|Tail],extract(NP,NewNp1,NewNp2),append([NewNp1],Tail,Temp1),append([NewNp2],Temp1,Temp2),retrieve(Temp2,Out).
 %%one noun phrase inside an np
-retrieve(NounPhrases,Out):-write("1 np case"),nl,
-    NounPhrases=[NP|Tail],extract(NP,NewNp),append([NewNp],Tail,Temp1),write(Temp1),nl,retrieve(Temp1,Out).
+retrieve(NounPhrases,Out):-
+    NounPhrases=[NP|Tail],extract(NP,NewNp),append([NewNp],Tail,Temp1),retrieve(Temp1,Out).
 
 
 %%%%%%%%%%%%%%%%%%%
