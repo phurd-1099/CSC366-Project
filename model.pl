@@ -44,6 +44,7 @@ noun(n(steak)) -->[steak].
 noun(n(beef)) -->[beef].
 noun(n(chineese)) -->[chineese].
 noun(n(rice))-->[rice].
+noun(n(chicken))-->[chicken].
 
 dot --> ['.'].
 dot -->[].
@@ -70,7 +71,7 @@ parse(List):-write("Enter what you want to eat"),nl,read_word_list(IN), extract_
 %%%%%%%%%%%%%%%%%
 %%Compare Nouns%%
 %%%%%%%%%%%%%%%%%
-category_selection(List,ResultCat,ResultScore):-features_cats(SampleList),Score = 0,get_cat(List,BestCategory,Score,SampleList,ResultCat,ResultScore).
+category_selection(List,ResultCat,ResultScore):-features_cats(SampleList),Score = 0,get_cat(List,american,Score,SampleList,ResultCat,ResultScore).
 
 get_cat(_,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
     AllCategories=[],ResultScore = BestScore,ResultCat=BestCategory.
@@ -99,22 +100,49 @@ compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,O
     \+member(Feature,TrialFeatures),NewScore is Score,
     compare_features(Tail,TrialCategory,TrialFeatures,NewScore,BestScore,BestCategory,Out,NewBestScore).
 %%%%%%%%%%%%%%%%%
-%%Extract Nouns%%
+%%%% Extract %%%%
 %%%%%%%%%%%%%%%%%
-extract_words(In,List):- sentence(Parse,In,[]),extract(Parse,_,NP),retrieve([NP],List).
 
-extract(s(vp(pn(i),v(Verb), NounPhrase)), Verb, NounPhrase).
-extract(s(vp(pn(i),v(Verb),d(a), NounPhrase)), Verb, NounPhrase).
+%%Extract a noun list needs to be refined to accept adj's
+extract_words(In,List):- sentence(Parse,In,[]),extract(Parse,NP),retrieve([NP],List).
+
+%%Full sentence rules
+extract(s(vp(pn(i),v(want), NounPhrase)),NounPhrase).
+extract(s(vp(pn(i),v(want),d(a), NounPhrase)),NounPhrase).
+
+%%Noun Phrases rules
 extract(np(adjp(Adjp),n(Noun)),Adjp,Noun).
+extract(np(adjp(adj(Adj),Adjp),n(Noun)),Adj,Adjp,Noun).
+
+%%Adjp rules
+extract(adjp(adj(Adj)),Adj).
+extract(adjp(comma(,),adjp(Adjp)),Adjp).
+extract(adjp(c(and),adjp(Adjp)),Adjp).
+
+%Adj
+extract(adj(Adj),Adj).
+
+%%Get nouns from
 extract(np(det(a),n(Noun)),Noun).
 extract(np(n(Noun)),Noun).
 extract(np(n(Noun),c(and),NounPhrase),Noun,NounPhrase).
 
+
+%%%%%%%%%%%%%%%%
+%Noun Retrieval%
+%%%%%%%%%%%%%%%%
 %%Base case
 retrieve(NounPhrases,Out):- NounPhrases=[],Out=[].
 %%noun is by its self
 retrieve(NounPhrases,Out):-
-   NounPhrases=[Noun|Tail],\+extract(Noun,_),\+extract(Noun,_,_),retrieve(Tail,NewList),Out=[Noun|NewList].
+   NounPhrases=[Noun|Tail],
+   \+extract(Noun,_),\+extract(Noun,_,_),\+extract(Noun,_,_,_),
+   retrieve(Tail,NewList),Out=[Noun|NewList].
+
+retrieve(NounPhrases,Out):- 
+    NounPhrases=[NP|Tail],extract(NP,NewNp1,NewNp2,NewNp3),
+    append([NewNp1],Tail,Temp1),append([NewNp2],Temp1,Temp2),append([NewNp3],Temp2,Temp3),
+    retrieve(Temp3,Out).
 %%two noun phrases inside an np
 retrieve(NounPhrases,Out):-
     NounPhrases=[NP|Tail],extract(NP,NewNp1,NewNp2),append([NewNp1],Tail,Temp1),append([NewNp2],Temp1,Temp2),retrieve(Temp2,Out).
@@ -216,7 +244,7 @@ merge_duplicates([], []).
 
 %%Features of categories in the form of a list with [Category,[features]]
 features_cats([
-    [american,[burger,wings,steak,beef,chickern]],
+    [american,[burger,wings,steak,beef,chicken]],
     [chinese, [chicken,dumplings,noodles,rice,beef]],
     [japanese,[sushi,seafood,rice]],
     [italian, [pizza,pasta]],
