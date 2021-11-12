@@ -139,6 +139,7 @@ extract(adjp(c(and),adjp(Adjp)),Adjp).
 
 %Adj
 extract(adj(Adj),Adj).
+extract(a(Adj),Adj).
 
 %%Get nouns from
 extract(np(det(a),n(Noun)),Noun).
@@ -326,7 +327,7 @@ normalprice(chipotle).
 normalprice(fajitagrill).
 
 cheap(mcdonalds).
-
+cheap(kfc).
 
 test:- assert_hyps([if(category(american),not(category(mexican))),if(category(mexican),not(category(american)))],[],KB).
     
