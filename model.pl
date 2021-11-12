@@ -21,18 +21,20 @@ adj_phrase(adjp(Comma,Adjp))-->comma(Comma),adj_phrase(Adjp).
 adj_phrase(adjp(Conj,Adjp)) --> conj(Conj),adj_phrase(Adjp).
 adj_phrase(adjp(Adj, Adjp)) --> adj(Adj), adj_phrase(Adjp).
 
-
 conj(c(and))-->[and].
-
 verb(v(want)) --> [want].
-
 det(d(a)) --> [a].
-
 propnoun(pn(i))-->[i].
-
 comma(comma(',')) -->[',']. 
+
 %%adj(a()) --> [].
 adj(adj(spicy)) --> [spicy].
+adj(a(fastfood)) --> [fastfood].
+adj(a(sitdown)) --> [sitdown].
+adj(a(delivery)) --> [delivery].
+adj(a(cheap)) --> [cheap].
+adj(a(average)) --> [average].
+adj(a(expensive)) --> [expensive].
 
 
 %%noun(n()) -->[].
@@ -45,6 +47,16 @@ noun(n(beef)) -->[beef].
 noun(n(chineese)) -->[chineese].
 noun(n(rice))-->[rice].
 noun(n(chicken))-->[chicken].
+noun(n(lomein)) -->[lomein].
+noun(n(dumplings)) -->[dumplings].
+noun(n(japanese)) -->[japanese].
+noun(n(sushi)) -->[sushi].
+noun(n(seafood)) -->[seafood].
+noun(n(pizza)) -->[pizza].
+noun(n(pasta)) -->[pasta].
+noun(n(tacos)) -->[tacos].
+noun(n(burritos)) -->[burritos].
+
 
 dot --> ['.'].
 dot -->[].
@@ -59,6 +71,12 @@ testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Sel
 %%%Utils%%%
 %%%%%%%%%%%
 
+sort_words(List,Nouns,Adjs):-
+    List = [],Nouns=[],Adjs=[].
+sort_words(List,Nouns,Adjs):-
+    List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,NewNouns,Adjs),Nouns = [Word|NewNouns].
+sort_words(List,Nouns,Adjs):-
+    List = [Word|Tail],adj_list(State),member(Word,State),sort_words(Tail,Nouns,NewAdjs),Adjs = [Word|NewAdjs].
 
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
@@ -251,6 +269,13 @@ features_cats([
     [mexican, [tacos,burritos,rice]]
 ]
 ).
+nouns_list([
+    burger,wings,steak,beef,chicken,dumplings,
+    noodles,rice,sushi,seafood,pizza,pasta,tacos,
+    burritos]).
+adj_list([
+    spicy,fastfood,sitdown,delivery,cheap,expensive,average
+    ]).
 
 
 american(buffalowildwings).
