@@ -330,5 +330,4 @@ cheap(mcdonalds).
 cheap(kfc).
 
 test:- assert_hyps([if(category(american),not(category(mexican))),if(category(mexican),not(category(american)))],[],KB).
-    %%Test
-    %%Test2
+    
