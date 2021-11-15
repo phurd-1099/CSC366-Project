@@ -71,12 +71,14 @@ testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Sel
 %%%Utils%%%
 %%%%%%%%%%%
 
-sort_words(List,Nouns,Adjs):-
+sort_words(List,Nouns,Price,Mode):-
     List = [],Nouns=[],Adjs=[].
-sort_words(List,Nouns,Adjs):-
-    List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,NewNouns,Adjs),Nouns = [Word|NewNouns].
-sort_words(List,Nouns,Adjs):-
-    List = [Word|Tail],adj_list(State),member(Word,State),sort_words(Tail,Nouns,NewAdjs),Adjs = [Word|NewAdjs].
+sort_words(List,Nouns,Price,Mode):-
+    List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,NewNouns,Price,Mode),Nouns = [Word|NewNouns].
+sort_words(List,Nouns,Price,Mode):-
+    List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Nouns,NewPrice,Mode),Price = [Word|NewAdjs].
+sort_words(List,Nouns,Price,Mode):-
+    List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Nouns,Price,NewMode),Mode=[Word|NewMode].
 
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
@@ -140,6 +142,7 @@ extract(adjp(c(and),adjp(Adjp)),Adjp).
 %Adj
 extract(adj(Adj),Adj).
 extract(a(Adj),Adj).
+
 
 %%Get nouns from
 extract(np(det(a),n(Noun)),Noun).
@@ -273,11 +276,12 @@ features_cats([
 nouns_list([
     burger,wings,steak,beef,chicken,dumplings,
     noodles,rice,sushi,seafood,pizza,pasta,tacos,
-    burritos]).
-adj_list([
-    spicy,fastfood,sitdown,delivery,cheap,expensive,average
+    burritos,spicy]).
+price_list([
+    cheap,expensive,average
     ]).
-
+mode_list([
+    fastfood,sitdown,delivery]).
 
 american(buffalowildwings).
 american(applebees).
