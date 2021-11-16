@@ -44,10 +44,10 @@ noun(n(burger)) -->[burger].
 noun(n(wings)) -->[wings].
 noun(n(steak)) -->[steak].
 noun(n(beef)) -->[beef].
-noun(n(chineese)) -->[chineese].
+noun(n(chinese)) -->[chinese].
 noun(n(rice))-->[rice].
 noun(n(chicken))-->[chicken].
-noun(n(lomein)) -->[lomein].
+noun(n(noodles)) -->[noodles].
 noun(n(dumplings)) -->[dumplings].
 noun(n(japanese)) -->[japanese].
 noun(n(sushi)) -->[sushi].
@@ -67,18 +67,71 @@ dot -->[].
 
 testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Selected: "),write(ResultCat),nl,write("Score: "),write(ResultScore).
 
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%%   Model Code   %%%
+%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%
+%%Main Loop%%
+%%%%%%%%%%%%%
+
+loop():- knowledge_base(KB),parse(List),sort_words(List,Categories,Nouns,Price,Mode),select_res(Categories,Nouns,Price,Mode,KB,Selected),write(Selected).
+    
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%Recommendation loop%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+select_res(Categories,Nouns,Price,Mode,KB,Selected):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),getshortlist(Nouns,KB,List,Options),priceloop(Price,KB,Options,Refined),Refined = [Selected|_].
+
+%%%%%%%%%%%%%%%%%%%%%
+%%Initial selection%%
+%%%%%%%%%%%%%%%%%%%%%
+
+selectloop(Categories,Nouns,Price,Mode,KB,List,Category):-
+    Categories = [],
+    category_selection(Nouns,ResultCat,ResultScore),write("Selected Category: "),write(ResultCat),nl,
+    findall(Restraunt,member(is(Restraunt,ResultCat),KB),List),Category=ResultCat.
+
+selectloop(Categories,Nouns,Price,Mode,List,Category):-
+    \+Categories = [],length(Categories, 1),Categories=[ResultCat|_],write(ResultCat),
+    findall(Restraunt,member(is(Restraunt,ResultCat),KB),List),Category=ResultCat.
+
+selectloop(Categories,Nouns,Price,Mode,List,Category):-
+    \+Categories = [],\+length(Categories, 1),write("Multiple categories selected please refine to one categories"),false.
+
+%%%%%Get a list of Restraunts that fits the nouns provided%%%%%
+getshortlist(Nouns,KB,List,Options):-
+    Nouns=[],NewList = [].
+
+getshortlist(Nouns,KB,List,Options):-
+    Nouns = [Word|Tail],findall(Next,(member(has(Next,Word),KB),member(Next,List)),Bag),getshortlist(Tail,KB,List,NewOptions),append(NewOptions,Bag,Options).
+
+
+priceloop(Price,KB,Options,Refined):-
+    Price=[],SelectedPrice=normalprice,findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+priceloop(Price,KB,Options,Refined):-
+    \+Price=[],length(Price,1),Price=[Selected|Price],findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+priceloop(Price,_,_,_):-
+    \+Price=[],\+length(Price,1),write("To many price indicators please refine"),false.
+
+
+
 %%%%%%%%%%%
 %%%Utils%%%
 %%%%%%%%%%%
 
-sort_words(List,Nouns,Price,Mode):-
+sort_words(List,Categories,Nouns,Price,Mode):-
     List = [],Nouns=[],Adjs=[].
-sort_words(List,Nouns,Price,Mode):-
-    List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,NewNouns,Price,Mode),Nouns = [Word|NewNouns].
-sort_words(List,Nouns,Price,Mode):-
-    List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Nouns,NewPrice,Mode),Price = [Word|NewAdjs].
-sort_words(List,Nouns,Price,Mode):-
-    List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Nouns,Price,NewMode),Mode=[Word|NewMode].
+sort_words(List,Categories,Nouns,Price,Mode):-
+    ist = [Word|Tail],categories_list(State),member(Word,State),sort_words(Tail,NewCategories,Nouns,Price,Mode),Categories = [Word|NewCategories].
+sort_words(List,Categories,Nouns,Price,Mode):-
+    List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,Categories,NewNouns,Price,Mode),Nouns = [Word|NewNouns].
+sort_words(List,Categories,Nouns,Price,Mode):-
+    List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,NewPrice,Mode),Price = [Word|NewAdjs].
+sort_words(List,Categories,Nouns,Price,Mode):-
+    List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,Price,NewMode),Mode=[Word|NewMode].
 
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
@@ -173,104 +226,17 @@ retrieve(NounPhrases,Out):-
     NounPhrases=[NP|Tail],extract(NP,NewNp),append([NewNp],Tail,Temp1),retrieve(Temp1,Out).
 
 
-%%%%%%%%%%%%%%%%%%%
-%%% Origin Sets %%%
-%%%%%%%%%%%%%%%%%%%
-
-%% Origin sets are represented as [type, [hyp1, hyp2, ...]] where the hyps provide
-%% the justification for believing a fact, and the type is either hyp or der. A hyp
-%% type is always associated with a singleton list of hyps (the term itself). A der
-%% type is associated with on or more hypotheses from which it is derivable. A term
-%% may have one or more origin sets (stored in a list).
-
-% Merge a single pair of OSes. 
-merge_os_pair([_, OS1], [_, OS2], [der, Result]) :- 
-    append(OS1, OS2, OS3), 
-    list_to_set(OS3, Result).
-
-% Base case - only one pair to merge. 
-merge_os([OS1], [OS2], [Result]) :- merge_os_pair(OS1, OS2, Result).
-% TODO: Multiple OSes to merge.
-%merge_os([OS1|Rest1], [OS2|Rest2], Result) :- 
-
-to_der_os([], []).
-to_der_os([[_,OS]|Rest], [[der,OS]|PartResult]) :- to_der_os(Rest, PartResult).
-
-% In removing terms you need to remove all of the origin sets with a specific hyp in them
-% but a term may have more than one OS, so this removes just the offending ones.
-remove_oses_with_hyp(_, [], []).
-remove_oses_with_hyp(Term, [[_, OS]|Rest], NewOS) :- 
-    member(Term, OS), !, remove_oses_with_hyp(Term, Rest, NewOS).
-remove_oses_with_hyp(Term, [[Type, OS]|Rest], [[Type, OS]|NewOS]) :- 
-    remove_oses_with_hyp(Term, Rest, NewOS).
-
-
-%%%%%%%%%%%%%%%%%%%%%%
-%%% Knowledge Base %%%
-%%%%%%%%%%%%%%%%%%%%%%
-
-%% A knowledge base is a list of the form [[term originset], [term originset], ...]
-%% These rules allow building a KB without doing any inference.
-
-assert_hyp(Term, OldKB, [[Term, [[hyp, [Term]]]]|OldKB]).
-
-assert_hyps([Term], OldKB, NewKB) :- assert_hyp(Term, OldKB, NewKB).
-assert_hyps([Term|Rest], OldKB, NewKB) :- 
-    assert_hyps(Rest, OldKB, PartKB), 
-    assert_hyp(Term, PartKB, NewKB).
-    
-%% Removing a hyp from the KB involves removing everything that has that hyp as one of
-%% its origin set members. 
-
-unassert_hyp(_, [], []).
-unassert_hyp(Term, [[Term,_]|KBRest], NewKB) :- unassert_hyp(Term, KBRest, NewKB).
-unassert_hyp(Term, [[OtherTerm, OS]|KBRest], NewKB) :- remove_oses_with_hyp(Term, OS, NewOS),
-    (NewOS = [] -> 
-        unassert_hyp(Term, KBRest, NewKB);
-        unassert_hyp(Term, KBRest, PartialKB), NewKB = [[OtherTerm, NewOS]|PartialKB]).
-
-% When two terms are in the KB which are identical, merge them.
-% - If they have different OSes, merge the OSes.
-% - If they have the same OS, do nothing.
-merge_term(T, T, T).
-merge_term([Term, OS1], [Term, OS2], [Term, NewOS]) :- merge_os(OS1, OS2, NewOS).
-
-
-merge_kbs(KB1, KB2, Result) :- append_kbs(KB1, KB2, Result).
-
-% Appending KBs is a 2-step process. First, just append them. Then, term-by-term, 
-% walk through the resulting KB looking for duplicate terms. Merge them. 
-
-append_kbs(KB1, KB2, Result) :- 
-    append(KB1, KB2, KB3), !,
-    merge_duplicates(KB3, Result).
-    
-merge_duplicates([[First, FirstOS]|Rest], [MergeTerm|Result]) :- 
-    member([First, OtherOS], Rest),
-    merge_term([First, FirstOS], [First, OtherOS], MergeTerm),
-    delete(Rest, [First, OtherOS], NewRest),
-    merge_duplicates(NewRest, Result).
-merge_duplicates([[First, FirstOS]|Rest], [[First, FirstOS]|Result]) :- 
-    merge_duplicates(Rest, Result).
-merge_duplicates([], []).
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%
-%%%   Model Code   %%%
-%%%%%%%%%%%%%%%%%%%%%%
-
 %%%%%%%%%%%%%%%%%%%%%%
 %%Knowledge base form%
 %%%%%%%%%%%%%%%%%%%%%%
 
 %%Features of categories in the form of a list with [Category,[features]]
 features_cats([
-    [american,[burger,wings,steak,beef,chicken]],
-    [chinese, [chicken,dumplings,noodles,rice,beef]],
-    [japanese,[sushi,seafood,rice]],
-    [italian, [pizza,pasta]],
-    [mexican, [tacos,burritos,rice]]
+    [american,[burger,wings,steak,beef,chicken,american]],
+    [chinese, [chicken,dumplings,noodles,rice,beef,chinese]],
+    [japanese,[sushi,seafood,rice,japanese]],
+    [italian, [pizza,pasta,italian]],
+    [mexican, [tacos,burritos,rice,mexican]]
 ]
 ).
 nouns_list([
@@ -282,56 +248,51 @@ price_list([
     ]).
 mode_list([
     fastfood,sitdown,delivery]).
+categories_list([
+    american,japanese,chinese,italian,mexican]).
 
-american(buffalowildwings).
-american(applebees).
-american(mcdonalds).
-american(rubytuesdays).
-american(chickfila).
-american(kfc).
-american(cheesecakefactory).
-american(texasroadhouse).
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Pre extablished KB%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%
+knowledge_base([
+    %%%%%%%%%%%%%%%%%%%%
+    %%%% Categories %%%%
+    %%%%%%%%%%%%%%%%%%%%
 
-chinese(pfchangs).
-chinese(pandaexpress).
-chinese(chowcity).
-chinese(kq).
+    %%%%American food%%%%
+    is(buffalowildwings,american),is(applebees,american),is(mcdonalds,american),is(rubytuesdays,american),is(chickfila,american),is(kfc,american),is(cheesecakefactory,american),is(texasroadhouse,american),
+    %%%%%% Chinese %%%%%%
+    is(pfchangs,chisese),is(pandaexpress,chinese),is(chowcity,chinese),is(kq,chinese),
+    %%%%% Japanese  %%%%%
+    is(koto,japanese),is(kiyomi,japanese),is(snakebomb,japanese),is(oceansushi,japanese),is(ichiro,japanese),
+    %%%%%  Italian  %%%%%
+    is(olivegarden,italian),is(carrabbas,italian),is(bucadibeppo,italian),is(pizzahut,italian),is(dominos,italian),
+    %%%%% Mexican %%%%%%
+    is(tacobell,mexican),is(chipotle,mexican),is(fajitagrill,mexican),is(aztecha,mexican),is(laparrila,mexican),
 
-japanese(koto).
-japanese(kiyomi).
-japanese(snakebomb).
-japanese(oceansushi).
-japanese(ichiro).
+    %%%%%%%%%%%%%%%%%%%%
+    %%%%%  PRICE  %%%%%%
+    %%%%%%%%%%%%%%%%%%%%
 
-italian(olivegarden).
-italian(carrabbas).
-italian(bucadibeppo).
-italian(pizzahut).
-italian(dominos).
+    %%%% Expensive %%%%%
+    is(texasroadhouse,expensive),is(cheesecakefactory,expensive),is(pfchangs,expensive),
+    %%% Normal Price %%%
+    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),
+    %%%%%% Cheap %%%%%%%
+    is(mcdonalds,cheap),is(kfc,cheap),
+    
+    %%%%%%%%%%%%%%%%%%%%
+    %%%%% KeyWords %%%%%
+    %%%%%%%%%%%%%%%%%%%%
 
-mexican(tacobell).
-mexican(chipotle).
-mexican(fajitagrill).
-mexican(aztecha).
-mexican(laparrila).
+    has(buffalowildwings,wings),has(applebees,burger),has(mcdonalds,burger),has(rubytuesdays,steak),has(chickfila,chicken),has(kfc,chicken),has(texasroadhouse,steak),has(cheesecakefactory,beef),
 
-expensive(texasroadhouse).
-expensive(cheesecakefactory).
-expensive(pfchangs).
+    has(pfchangs,dumplings),has(pandaexpress,noodles),has(chowcity,rice),has(pfchangs,rice),has(chowcity,noodles),has(kq,beef),has(kq,chicken),
 
-normalprice(buffalowildwings).
-normalprice(applebees).
-normalprice(chickfila).
-normalprice(pandaexpress).
-normalprice(kiyomi).
-normalprice(koto).
-normalprice(olivegarden).
-normalprice(carrabbas).
-normalprice(chipotle).
-normalprice(fajitagrill).
+    has(koto,rice),has(kiyomi,sushi),has(kiyomi,seafood),has(snakebomb,rice),has(snakebomb,sushi),has(oceansushi,sushi),has(ichiro,rice),
 
-cheap(mcdonalds).
-cheap(kfc).
+    has(olivegarden,pasta),has(carrabbas,pasta),has(bucadibeppo,pasta),has(pizzahut,pizza),has(dominos,pizza),
 
-test:- assert_hyps([if(category(american),not(category(mexican))),if(category(mexican),not(category(american)))],[],KB).
-  
+    has(tacobell,tacos),has(tacobell,burritos),has(chipotle,rice),has(chipotle,burritos),has(fajitagrill,burritos),has(aztecha,burritos),has(laparrila,rice)
+    
+    ]).
