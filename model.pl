@@ -76,19 +76,22 @@ testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Sel
 %%Main Loop%%
 %%%%%%%%%%%%%
 
-loop():- knowledge_base(KB),parse(List),sort_words(List,Categories,Nouns,Price,Mode),select_res(Categories,Nouns,Price,Mode,KB,Selected),write(Selected).
+loop():- knowledge_base(KB),parse(List),sort_words(List,Categories,Nouns,Price,Mode),select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),
+    append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)]).
     
 
 %%%%%%%%%%%%%%%%%%%%%%%
 %%Recommendation loop%%
 %%%%%%%%%%%%%%%%%%%%%%%
 
-select_res(Categories,Nouns,Price,Mode,KB,Selected):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),getshortlist(Nouns,KB,List,Options),priceloop(Price,KB,Options,Refined),Refined = [Selected|_].
+%%Handeler for the multiple selection loops returns the category as well as the top element of the recommendation list
+select_res(Categories,Nouns,Price,Mode,KB,Selected,Category):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),getshortlist(Nouns,KB,List,Options),priceloop(Price,KB,Options,Refined),modeloop(Mode,KB,Refined,Final),Final = [Selected|_].
 
 %%%%%%%%%%%%%%%%%%%%%
 %%Initial selection%%
 %%%%%%%%%%%%%%%%%%%%%
 
+%%Check to see if a category was used in the input if not then run category_selection to get the category also if multiple categories were selected return false
 selectloop(Categories,Nouns,Price,Mode,KB,List,Category):-
     Categories = [],
     category_selection(Nouns,ResultCat,ResultScore),write("Selected Category: "),write(ResultCat),nl,
@@ -108,7 +111,12 @@ getshortlist(Nouns,KB,List,Options):-
 getshortlist(Nouns,KB,List,Options):-
     Nouns = [Word|Tail],findall(Next,(member(has(Next,Word),KB),member(Next,List)),Bag),getshortlist(Tail,KB,List,NewOptions),append(NewOptions,Bag,Options).
 
+%%%%%%%%%%%%%
+%%Price lop%%
+%%%%%%%%%%%%%
 
+%%Check the price list if none was selected assume normal if more then one were selected return false and ask user to specify
+%%If the price would result in an empty list ignore it in favor of noun selection
 priceloop(Price,KB,Options,Refined):-
     Price=[],SelectedPrice=normalprice,findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
 priceloop(Price,KB,Options,Refined):-
@@ -116,12 +124,28 @@ priceloop(Price,KB,Options,Refined):-
 priceloop(Price,_,_,_):-
     \+Price=[],\+length(Price,1),write("To many price indicators please refine"),false.
 
+%%%%%%%%%%%%%
+%%Mode loop%%
+%%%%%%%%%%%%%
+
+%%Same rules as the price loop just uses mode and assumes fastfood 
+modeloop(Mode,KB,Options,Refined):-
+    Mode=[],SelectedMode=fastfood,findall(Restraunt,(member(is(Restraint,SelectedMode),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+
+modeloop(Mode,KB,Options,Refined):-
+    \+Mode=[],length(Mode,1), Mode=[SelectedMode|_],findall(Restraunt,(member(is(Restraint,SelectedMode),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+
+modeloop(Mode,KB,Options,Refined):-
+   \+Mode=[],\+length(Mode,1),write("To many modes selected please refine"),false.
+
+
 
 
 %%%%%%%%%%%
 %%%Utils%%%
 %%%%%%%%%%%
 
+%%Sorts words into the various categories used by the selection process
 sort_words(List,Categories,Nouns,Price,Mode):-
     List = [],Nouns=[],Adjs=[].
 sort_words(List,Categories,Nouns,Price,Mode):-
@@ -132,20 +156,23 @@ sort_words(List,Categories,Nouns,Price,Mode):-
     List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,NewPrice,Mode),Price = [Word|NewAdjs].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,Price,NewMode),Mode=[Word|NewMode].
-
+%%Reads words from the users input
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
     atom_codes(A,Cs),
     tokenize_atom(A,Ws).
 
-
+%%Handels listening for and parsing the users input into a list of words to be used for recommendation
 parse(List):-write("Enter what you want to eat"),nl,read_word_list(IN), extract_words(IN,List).
 
 %%%%%%%%%%%%%%%%%
 %%Compare Nouns%%
 %%%%%%%%%%%%%%%%%
+
+%%%%Handels the category selection from a list of key words
 category_selection(List,ResultCat,ResultScore):-features_cats(SampleList),Score = 0,get_cat(List,american,Score,SampleList,ResultCat,ResultScore).
 
+%%Runs a comparison loop for each of the categories keeping track of the best category and score in case of a tie it keeps the initial choice
 get_cat(_,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
     AllCategories=[],ResultScore = BestScore,ResultCat=BestCategory.
 
@@ -155,7 +182,7 @@ get_cat(List,BestCategory,BestScore,AllCategories,ResultCat,ResultScore):-
     Selected = [TrialCategory,TrialFeatures|_],
     compare_features(List,TrialCategory,TrialFeatures,Score,BestScore,BestCategory,Out,NewBestScore),
     get_cat(List,Out,NewBestScore,Tail,ResultCat,ResultScore).
-
+%%%Runs a comparison from the words used to identify a category to the words provided
 %%Base case for compare
 compare_features(List,TrialCategory,_,Score,BestScore,BestCategory,Out,NewBestScore):- 
     List = [],Score > BestScore, Out = TrialCategory,NewBestScore is Score.
@@ -237,17 +264,20 @@ features_cats([
     [japanese,[sushi,seafood,rice,japanese]],
     [italian, [pizza,pasta,italian]],
     [mexican, [tacos,burritos,rice,mexican]]
-]
-).
+]).
+
 nouns_list([
     burger,wings,steak,beef,chicken,dumplings,
     noodles,rice,sushi,seafood,pizza,pasta,tacos,
     burritos,spicy]).
+
 price_list([
     cheap,expensive,average
     ]).
+
 mode_list([
     fastfood,sitdown,delivery]).
+
 categories_list([
     american,japanese,chinese,italian,mexican]).
 
@@ -280,6 +310,12 @@ knowledge_base([
     is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),
     %%%%%% Cheap %%%%%%%
     is(mcdonalds,cheap),is(kfc,cheap),
+
+    %%%%%%%%%%%%%%%%%%%
+    %%%%   Mode   %%%%%
+    %%%%%%%%%%%%%%%%%%%
+    
+
     
     %%%%%%%%%%%%%%%%%%%%
     %%%%% KeyWords %%%%%
