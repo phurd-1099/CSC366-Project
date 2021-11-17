@@ -76,9 +76,13 @@ testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Sel
 %%Main Loop%%
 %%%%%%%%%%%%%
 
+%%Initial case
 loop():- knowledge_base(KB),parse(List),sort_words(List,Categories,Nouns,Price,Mode),select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),
-    append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)]).
-    
+    append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),loop(NewKB).
+
+loop(KB):-nl,write("If you are happly with this recommendation type 'done' otherwise enter a revision"),nl,read_word_list(In),revision(In,KB).
+
+revision(In,KB):-In=[Head|_],write(Head),Head=done,true.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 %%Recommendation loop%%
