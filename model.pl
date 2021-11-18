@@ -71,25 +71,80 @@ testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Sel
 %%%%%%%%%%%%%%%%%%%%%%
 %%%   Model Code   %%%
 %%%%%%%%%%%%%%%%%%%%%%
+print(Categories,Mode,Price,Nouns):-
+    write("Categories:"),write(Categories),nl,
+    write("Mode:"),write(Mode),nl,
+    write("Price:"),write(Price),nl,
+    write("Nouns: "),write(Nouns),nl.
 
 %%%%%%%%%%%%%
 %%Main Loop%%
 %%%%%%%%%%%%%
 
 %%Initial case
-loop():- knowledge_base(KB),parse(List),sort_words(List,Categories,Nouns,Price,Mode),select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),
-    append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),loop(NewKB).
 
-loop(KB):-nl,write("If you are happly with this recommendation type 'done' otherwise enter a revision"),nl,read_word_list(In),revision(In,KB).
 
-revision(In,KB):-In=[Head|_],write(Head),Head=done,true.
+start():-knowledge_base(KB),write("What would you like to eat?:"),nl,
+    read_word_list(In),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
+    select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),nl,
+    append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),
+    write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),write(NEWIN),nl,revision(NEWIN,NewKB).
+
+%%%%%%%%%%%%%%
+%% Revision %%
+%%%%%%%%%%%%%%
+
+revision(In,KB):-In=[Head|_],Head=done.
+
+
+revision(In,KB):-write("Redo"),nl,extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
+    category_revision(KB,Nouns,Category,Categories),price_revision(KB,Price,NewPrice),mode_revision(KB,Mode,NewMode),
+    select_res([Category],Nouns,Price,Mode,KB,Selected,Category),write(Selected).
+
+%%%%%%%%%%%%%%%%%
+%%Price Revision%
+%%%%%%%%%%%%%%%%%
+
+%%Look at new and old price info to generate the new price info
+%%No new price use old
+price_revision(KB,Price,NewPrice):-Price=[],findall(X,member(price(X),KB),[OldPrice]),NewPrice = OldPrice.
+%%If a price does exist then use that instead of the old
+price_revision(_,Price,NewPrice):- NewPrice=Price.
+
+%%%%%%%%%%%%%%%%
+%%Moderevision%%
+%%%%%%%%%%%%%%%%
+%%no new mode use old
+mode_revision(Kb,Mode,NewMode):-Mode=[],findall(X,member(price(X),KB),[OldMode]),NewMode=OldMode.
+%% new mode use that in place of the old
+mode_revision(_,Mode,NewMode):-NewMode=Mode.
+
+
+%%%%%%%%%%%%%%%%%%%%%
+%%Category revision%%
+%%%%%%%%%%%%%%%%%%%%%
+
+%%Look into the previous decision and see if the new nouns line up with the old category
+
+%%if a category is given then use that 
+category_revision(_,_,Category,Categories):- \+Categories =[],length(Categories,1),Categories=[Category|_].
+
+%%If no new nouns were provided stick with the origional category
+category_revision(_,Nouns,Category,_):-Nouns=[],KB = [previous(Category)],write("NO nouns").
+
+%%If there are new nouns check if the noun is in the same category
+category_revision(KB,Nouns,Category,_):- \+Nouns = [], features_cats(Temp),findall(X,member(category(X),KB),[Previous]),Temp=[[Previous,Prev_Features]|_],contains(Nouns,Prev_Features),write("Same cat"),nl,Category = Previous.
+    
+%%nouns dont all belong in the new catagory so re-run recommendation with the new and old categories
+category_revision(KB,Nouns,Category,Categories):- write("NewCat"),nl,findall(X,member(nouns(X),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+    category_selection(Nouns,Category,_).
 
 %%%%%%%%%%%%%%%%%%%%%%%
 %%Recommendation loop%%
 %%%%%%%%%%%%%%%%%%%%%%%
 
 %%Handeler for the multiple selection loops returns the category as well as the top element of the recommendation list
-select_res(Categories,Nouns,Price,Mode,KB,Selected,Category):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),getshortlist(Nouns,KB,List,Options),priceloop(Price,KB,Options,Refined),modeloop(Mode,KB,Refined,Final),Final = [Selected|_].
+select_res(Categories,Nouns,Price,Mode,KB,Selected,Category):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),(\+Nouns=[],getshortlist(Nouns,KB,List,Options);Nouns=[],Options=List),priceloop(Price,KB,Options,Refined),modeloop(Mode,KB,Refined,Final),(Nouns=[],Final=[Selected|_];\+Nouns=[],fc(KB,Final,Nouns,0,Choice,Selected)).
 
 %%%%%%%%%%%%%%%%%%%%%
 %%Initial selection%%
@@ -101,11 +156,11 @@ selectloop(Categories,Nouns,Price,Mode,KB,List,Category):-
     category_selection(Nouns,ResultCat,ResultScore),write("Selected Category: "),write(ResultCat),nl,
     findall(Restraunt,member(is(Restraunt,ResultCat),KB),List),Category=ResultCat.
 
-selectloop(Categories,Nouns,Price,Mode,List,Category):-
-    \+Categories = [],length(Categories, 1),Categories=[ResultCat|_],write(ResultCat),
+selectloop(Categories,Nouns,Price,Mode,KB,List,Category):-
+    \+Categories = [],length(Categories, 1),Categories=[ResultCat|_],
     findall(Restraunt,member(is(Restraunt,ResultCat),KB),List),Category=ResultCat.
 
-selectloop(Categories,Nouns,Price,Mode,List,Category):-
+selectloop(Categories,Nouns,Price,Mode,KB,List,Category):-
     \+Categories = [],\+length(Categories, 1),write("Multiple categories selected please refine to one categories"),false.
 
 %%%%%Get a list of Restraunts that fits the nouns provided%%%%%
@@ -142,18 +197,29 @@ modeloop(Mode,KB,Options,Refined):-
 modeloop(Mode,KB,Options,Refined):-
    \+Mode=[],\+length(Mode,1),write("To many modes selected please refine"),false.
 
+%%%%%%%%%%%%%%%
+%%Final Check%%
+%%%%%%%%%%%%%%%
+fc(KB,Options,Nouns,BS,Choice,Out):-Options=[],Out = Choice.
+fc(KB,Options,Nouns,BS,Choice,Out):-Options=[Selected|Tail],scoregen(Selected,Nouns,KB,0,Score),Score>BS,NewBS = Score,NewChoice = Selected,fc(KB,Tail,Nouns,NewBS,NewChoice,Out).
+fc(KB,Options,Nouns,BS,Choice,Out):-Options=[Selected|Tail],scoregen(Selected,Nouns,KB,0,Score),\+Score>BS,NewBS is BS,NewChoice =Choice,fc(KB,Tail,Nouns,NewBS,NewChoice,Out).
 
+scoregen(Target,Nouns,KB,Score,Out):-Nouns=[],Out = Score.
+scoregen(Target,Nouns,KB,Score,Out):- Nouns = [Word|Rest],member(has(Target,Word),KB),NewScore is Score + 1,scoregen(Target,Rest,KB,NewScore,Out).
 
+scoregen(Target,Nouns,KB,Score,Out):- Nouns = [Word|Rest],\+member(has(Target,Word),KB),NewScore is Score,scoregen(Target,Rest,KB,NewScore,Out).
 
 %%%%%%%%%%%
 %%%Utils%%%
 %%%%%%%%%%%
+contains(List,Source):-List=[].
+contains(List,Source):-List=[Head|Tail],member(Head,Source),contains(Tail,Source).
 
 %%Sorts words into the various categories used by the selection process
 sort_words(List,Categories,Nouns,Price,Mode):-
-    List = [],Nouns=[],Adjs=[].
+    List = [],Nouns=[],Adjs=[],Categories=[].
 sort_words(List,Categories,Nouns,Price,Mode):-
-    ist = [Word|Tail],categories_list(State),member(Word,State),sort_words(Tail,NewCategories,Nouns,Price,Mode),Categories = [Word|NewCategories].
+    List = [Word|Tail],categories_list(State),member(Word,State),sort_words(Tail,NewCategories,Nouns,Price,Mode),Categories = [Word|NewCategories].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,Categories,NewNouns,Price,Mode),Nouns = [Word|NewNouns].
 sort_words(List,Categories,Nouns,Price,Mode):-
