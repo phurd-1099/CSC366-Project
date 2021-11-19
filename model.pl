@@ -76,6 +76,9 @@ print(Categories,Mode,Price,Nouns):-
     write("Mode:"),write(Mode),nl,
     write("Price:"),write(Price),nl,
     write("Nouns: "),write(Nouns),nl.
+print(KB):-
+        findall(OC,member(category(OC),KB),[OldCategory]),write("OldCategory:"),write(OldCategory),nl,
+        findall(ON,member(nouns(ON),KB),[OldNouns]),write("OLDNouns:"),write(OldNouns).
 
 %%%%%%%%%%%%%
 %%Main Loop%%
@@ -88,7 +91,7 @@ start():-knowledge_base(KB),write("What would you like to eat?:"),nl,
     read_word_list(In),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
     select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),nl,
     append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),
-    write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),write(NEWIN),nl,revision(NEWIN,NewKB).
+    write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
 %%%%%%%%%%%%%%
 %% Revision %%
@@ -96,10 +99,28 @@ start():-knowledge_base(KB),write("What would you like to eat?:"),nl,
 
 revision(In,KB):-In=[Head|_],Head=done.
 
+%%%For revision process normal then revise the categories,price,and mode checking for new information
+%%%Then combine the old and new nouns and make a recommendation
+%%(The nouns wont affect the category since we selected it in category revision and put it into the categories list)
 
-revision(In,KB):-write("Redo"),nl,extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
-    category_revision(KB,Nouns,Category,Categories),price_revision(KB,Price,NewPrice),mode_revision(KB,Mode,NewMode),
-    select_res([Category],Nouns,Price,Mode,KB,Selected,Category),write(Selected).
+revision(In,KB):-
+    write("Redo"),nl,print(KB),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
+    category_revision(KB,Nouns,Category,Categories),
+    price_revision(KB,Price,NewPrice),
+    mr(KB,Mode,NewMode),
+    findall(OS,member(previous(OS),KB),OldSelections),
+    getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),
+    append(OldSelections,[Selected],AllSelections),
+    knowledge_base(KB2),append(KB2,[preious(AllSelections),nouns(Nouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
+    nl,write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
+
+    
+getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections):-
+    member(category(Category),KB),
+    select_res([Category],Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected).
+getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections):-
+    \+member(category(Category),KB),findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+    select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected).
 
 %%%%%%%%%%%%%%%%%
 %%Price Revision%
@@ -114,11 +135,11 @@ price_revision(_,Price,NewPrice):- NewPrice=Price.
 %%%%%%%%%%%%%%%%
 %%Moderevision%%
 %%%%%%%%%%%%%%%%
-%%no new mode use old
-mode_revision(Kb,Mode,NewMode):-Mode=[],findall(X,member(price(X),KB),[OldMode]),NewMode=OldMode.
-%% new mode use that in place of the old
-mode_revision(_,Mode,NewMode):-NewMode=Mode.
 
+%%no new mode use old
+mr(KB,Mode,NewMode):-Mode=[],findall(X,member(mode(X),KB),[NewMode]).
+%% new mode use that in place of the old
+mr(KB,Mode,NewMode):-NewMode is Mode.
 
 %%%%%%%%%%%%%%%%%%%%%
 %%Category revision%%
@@ -130,13 +151,13 @@ mode_revision(_,Mode,NewMode):-NewMode=Mode.
 category_revision(_,_,Category,Categories):- \+Categories =[],length(Categories,1),Categories=[Category|_].
 
 %%If no new nouns were provided stick with the origional category
-category_revision(_,Nouns,Category,_):-Nouns=[],KB = [previous(Category)],write("NO nouns").
+category_revision(_,Nouns,Category,_):-Nouns=[],KB = [previous(Category)].
 
 %%If there are new nouns check if the noun is in the same category
-category_revision(KB,Nouns,Category,_):- \+Nouns = [], features_cats(Temp),findall(X,member(category(X),KB),[Previous]),Temp=[[Previous,Prev_Features]|_],contains(Nouns,Prev_Features),write("Same cat"),nl,Category = Previous.
+category_revision(KB,Nouns,Category,_):- \+Nouns = [], features_cats(Temp),findall(X,member(category(X),KB),[Previous]),Temp=[[Previous,Prev_Features]|_],contains(Nouns,Prev_Features),Category = Previous.
     
 %%nouns dont all belong in the new catagory so re-run recommendation with the new and old categories
-category_revision(KB,Nouns,Category,Categories):- write("NewCat"),nl,findall(X,member(nouns(X),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+category_revision(KB,Nouns,Category,Categories):- findall(X,member(nouns(X),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
     category_selection(Nouns,Category,_).
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -145,7 +166,20 @@ category_revision(KB,Nouns,Category,Categories):- write("NewCat"),nl,findall(X,m
 
 %%Handeler for the multiple selection loops returns the category as well as the top element of the recommendation list
 select_res(Categories,Nouns,Price,Mode,KB,Selected,Category):-selectloop(Categories,Nouns,Price,Mode,KB,List,Category),(\+Nouns=[],getshortlist(Nouns,KB,List,Options);Nouns=[],Options=List),priceloop(Price,KB,Options,Refined),modeloop(Mode,KB,Refined,Final),(Nouns=[],Final=[Selected|_];\+Nouns=[],fc(KB,Final,Nouns,0,Choice,Selected)).
+%%For revisions modify the selection
+select_res(Categories,Nouns,Price,Mode,KB,Selected,Category,Previous):-
+    selectloop(Categories,Nouns,Price,Mode,KB,List,Category),
+    (\+Nouns=[],getshortlist(Nouns,KB,List,Options);
+        Nouns=[],Options=List),
+        priceloop(Price,KB,Options,Refined),
+        modeloop(Mode,KB,Refined,Final),
+        (Nouns=[],Final=[Possibile|_];
+            \+Nouns=[],fc(KB,Final,Nouns,0,Choice,Possible)),check(Final,Previous,Possible,Selected).
 
+
+%%Quick check to see if any options have been selected before
+check(Final,Previous,Possible,Selected):- (length(Final,1); \+member(Possible,Previous)),Selected = Possible.
+check(Final,Previous,Possible,Selected):- Final = [Head|Tail],check(Tail,Previous,Head,Selected).
 %%%%%%%%%%%%%%%%%%%%%
 %%Initial selection%%
 %%%%%%%%%%%%%%%%%%%%%
@@ -377,7 +411,7 @@ knowledge_base([
     %%%% Expensive %%%%%
     is(texasroadhouse,expensive),is(cheesecakefactory,expensive),is(pfchangs,expensive),
     %%% Normal Price %%%
-    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),
+    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kq,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),
     %%%%%% Cheap %%%%%%%
     is(mcdonalds,cheap),is(kfc,cheap),
 
@@ -393,7 +427,7 @@ knowledge_base([
 
     has(buffalowildwings,wings),has(applebees,burger),has(mcdonalds,burger),has(rubytuesdays,steak),has(chickfila,chicken),has(kfc,chicken),has(texasroadhouse,steak),has(cheesecakefactory,beef),
 
-    has(pfchangs,dumplings),has(pandaexpress,noodles),has(chowcity,rice),has(pfchangs,rice),has(chowcity,noodles),has(kq,beef),has(kq,chicken),
+    has(pfchangs,dumplings),has(pandaexpress,noodles),has(chowcity,rice),has(pfchangs,rice),has(chowcity,noodles),has(kq,beef),has(kq,chicken),has(kq,noodles),
 
     has(koto,rice),has(kiyomi,sushi),has(kiyomi,seafood),has(snakebomb,rice),has(snakebomb,sushi),has(oceansushi,sushi),has(ichiro,rice),
 
