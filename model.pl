@@ -208,12 +208,16 @@ getshortlist(Nouns,KB,List,Options):-
 %%Price lop%%
 %%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%
+%%%%BROKEN%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%
+
 %%Check the price list if none was selected assume normal if more then one were selected return false and ask user to specify
 %%If the price would result in an empty list ignore it in favor of noun selection
 priceloop(Price,KB,Options,Refined):-
     Price=[],SelectedPrice=normalprice,findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
 priceloop(Price,KB,Options,Refined):-
-    \+Price=[],length(Price,1),Price=[Selected|Price],findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+    \+Price=[],length(Price,1),Price=[Selected|Price],findall(Restraunt,(member(is(Restraunt,Selected),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
 priceloop(Price,_,_,_):-
     \+Price=[],\+length(Price,1),write("To many price indicators please refine"),false.
 
@@ -251,13 +255,13 @@ contains(List,Source):-List=[Head|Tail],member(Head,Source),contains(Tail,Source
 
 %%Sorts words into the various categories used by the selection process
 sort_words(List,Categories,Nouns,Price,Mode):-
-    List = [],Nouns=[],Adjs=[],Categories=[].
+    List = [],Nouns=[],Price=[],Categories=[],Mode=[].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List = [Word|Tail],categories_list(State),member(Word,State),sort_words(Tail,NewCategories,Nouns,Price,Mode),Categories = [Word|NewCategories].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List = [Word|Tail],nouns_list(State),member(Word,State),sort_words(Tail,Categories,NewNouns,Price,Mode),Nouns = [Word|NewNouns].
 sort_words(List,Categories,Nouns,Price,Mode):-
-    List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,NewPrice,Mode),Price = [Word|NewAdjs].
+    List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,NewPrice,Mode),Price = [Word|NewPrice].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,Price,NewMode),Mode=[Word|NewMode].
 %%Reads words from the users input
@@ -411,7 +415,7 @@ knowledge_base([
     %%%% Expensive %%%%%
     is(texasroadhouse,expensive),is(cheesecakefactory,expensive),is(pfchangs,expensive),
     %%% Normal Price %%%
-    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kq,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),
+    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kq,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),is(rubytuesdays,normalprice),
     %%%%%% Cheap %%%%%%%
     is(mcdonalds,cheap),is(kfc,cheap),
 
