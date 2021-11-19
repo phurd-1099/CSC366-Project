@@ -208,16 +208,13 @@ getshortlist(Nouns,KB,List,Options):-
 %%Price lop%%
 %%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%
-%%%%BROKEN%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%
 
 %%Check the price list if none was selected assume normal if more then one were selected return false and ask user to specify
 %%If the price would result in an empty list ignore it in favor of noun selection
 priceloop(Price,KB,Options,Refined):-
     Price=[],SelectedPrice=normalprice,findall(Restraunt,(member(is(Restraunt,normalprice),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
 priceloop(Price,KB,Options,Refined):-
-    \+Price=[],length(Price,1),Price=[Selected|Price],findall(Restraunt,(member(is(Restraunt,Selected),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
+    \+Price=[],length(Price,1),Price=[Selected|_],findall(Restraunt,(member(is(Restraunt,Selected),KB),member(Restraunt,Options)),Bag),(Bag=[],Refined=Options;\+Bag=[],Refined = Bag).
 priceloop(Price,_,_,_):-
     \+Price=[],\+length(Price,1),write("To many price indicators please refine"),false.
 
