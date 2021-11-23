@@ -61,11 +61,6 @@ noun(n(burritos)) -->[burritos].
 dot --> ['.'].
 dot -->[].
 
-%%%%%%%%%%%
-%%%Test %%%
-%%%%%%%%%%%
-
-testall():-parse(List),category_selection(List,ResultCat,ResultScore),write("Selected: "),write(ResultCat),nl,write("Score: "),write(ResultScore).
 
 
 %%%%%%%%%%%%%%%%%%%%%%
@@ -91,7 +86,7 @@ start():-knowledge_base(KB),write("What would you like to eat?:"),nl,
     read_word_list(In),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
     select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),nl,
     append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),
-    write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
+    write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
 %%%%%%%%%%%%%%
 %% Revision %%
@@ -112,7 +107,7 @@ revision(In,KB):-
     getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),
     append(OldSelections,[Selected],AllSelections),
     knowledge_base(KB2),append(KB2,[preious(AllSelections),nouns(Nouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
-    nl,write("If this is not what you want type a new statment else type Done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
+    nl,write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
     
 getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections):-
@@ -261,6 +256,8 @@ sort_words(List,Categories,Nouns,Price,Mode):-
     List = [Word|Tail],price_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,NewPrice,Mode),Price = [Word|NewPrice].
 sort_words(List,Categories,Nouns,Price,Mode):-
     List=[Word|Tail],mode_list(State),member(Word,State),sort_words(Tail,Categories,Nouns,Price,NewMode),Mode=[Word|NewMode].
+sort_words(List,Categories,Nouns,Price,Mode):-
+    List=[Word|Tail],sort_words(Tail,Categories,Nouns,Price,Mode).
 %%Reads words from the users input
 read_word_list(Ws) :-
     read_line_to_codes(user_input,Cs),
