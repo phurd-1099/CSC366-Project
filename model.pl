@@ -73,7 +73,9 @@ print(Categories,Mode,Price,Nouns):-
     write("Nouns: "),write(Nouns),nl.
 print_KB(KB):-
         findall(OC,member(category(OC),KB),[OldCategory]),write("OldCategory:"),write(OldCategory),nl,
-        findall(ON,member(nouns(ON),KB),[OldNouns]),write("OLDNouns:"),write(OldNouns),nl.
+        findall(ON,member(nouns(ON),KB),[OldNouns]),write("OLDNouns:"),write(OldNouns),nl,
+        findall(OP,member(price(OP),KB),[OldPrice]),write("OldPrice: "),write(OldPrice),nl,
+        findall(OM,member(mode(OM),KB),[OldMode]),write("OldMode: "),write(OldMode),nl.
 
 %%%%%%%%%%%%%
 %%Main Loop%%
@@ -104,7 +106,7 @@ revision(In,KB):-
     price_revision(KB,Price,NewPrice),
     mr(KB,Mode,NewMode),
     findall(OS,member(previous(OS),KB),OldSelections),
-    findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+    findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),write("Input to selectres:"),nl,print([Category],NewMode,NewPrice,AllNouns),
     select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected),
     append(OldSelections,[Selected],AllSelections),
     memoryrevision(AllNouns,MemoryNouns),
@@ -145,7 +147,7 @@ mr(KB,Mode,NewMode):-NewMode is Mode.
 category_revision(_,_,Category,Categories):- \+Categories =[],length(Categories,1),Categories=[Category|_].
 
 %%If no new nouns were provided stick with the origional category
-category_revision(_,Nouns,Category,_):-Nouns=[],KB = [previous(Category)].
+category_revision(KB,Nouns,Category,_):-Nouns=[],findall(OC,member(category(OC),KB),[Category]).
 
 %%If there are new nouns check if the noun is in the same category
 category_revision(KB,Nouns,Category,_):- \+Nouns = [], features_cats(Temp),findall(X,member(category(X),KB),[Previous]),Temp=[[Previous,Prev_Features]|_],contains(Nouns,Prev_Features),Category = Previous.
