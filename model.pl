@@ -71,9 +71,9 @@ print(Categories,Mode,Price,Nouns):-
     write("Mode:"),write(Mode),nl,
     write("Price:"),write(Price),nl,
     write("Nouns: "),write(Nouns),nl.
-print(KB):-
+print_KB(KB):-
         findall(OC,member(category(OC),KB),[OldCategory]),write("OldCategory:"),write(OldCategory),nl,
-        findall(ON,member(nouns(ON),KB),[OldNouns]),write("OLDNouns:"),write(OldNouns).
+        findall(ON,member(nouns(ON),KB),[OldNouns]),write("OLDNouns:"),write(OldNouns),nl.
 
 %%%%%%%%%%%%%
 %%Main Loop%%
@@ -99,23 +99,22 @@ revision(In,KB):-In=[Head|_],Head=done.
 %%(The nouns wont affect the category since we selected it in category revision and put it into the categories list)
 
 revision(In,KB):-
-    write("Redo"),nl,print(KB),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
+    write("Redo"),nl,print_KB(KB),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
     category_revision(KB,Nouns,Category,Categories),
     price_revision(KB,Price,NewPrice),
     mr(KB,Mode,NewMode),
     findall(OS,member(previous(OS),KB),OldSelections),
-    getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),
+    findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+    select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected),
     append(OldSelections,[Selected],AllSelections),
-    knowledge_base(KB2),append(KB2,[preious(AllSelections),nouns(Nouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
+    memoryrevision(AllNouns,MemoryNouns),
+    knowledge_base(KB2),append(KB2,[preious(AllSelections),nouns(MemoryNouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
     nl,write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
+    memoryrevision(Words,NewWords):-length_list(Count,0,Words),Count<7,NewWords = Words.
+    memoryrevision(Words,NewWords):-drop_last(Words,ShorterList),memoryrevision(ShorterList,NewWords).
+
     
-getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections):-
-    member(category(Category),KB),
-    select_res([Category],Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected).
-getres(Category,Nouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections):-
-    \+member(category(Category),KB),findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
-    select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected).
 
 %%%%%%%%%%%%%%%%%
 %%Price Revision%
@@ -242,6 +241,15 @@ scoregen(Target,Nouns,KB,Score,Out):- Nouns = [Word|Rest],\+member(has(Target,Wo
 %%%%%%%%%%%
 %%%Utils%%%
 %%%%%%%%%%%
+drop_last([X|Xs],Ys):-
+    drop(Xs,Ys,X).
+drop([],[],_).
+drop([X1|Xs],[X0|Ys],X0):-
+    drop(Xs,Ys,X1).
+
+length_list(L,X,List):-List=[],L is X.
+length_list(L,X,[_|T]):-length_list(L,X+1,T).
+
 contains(List,Source):-List=[].
 contains(List,Source):-List=[Head|Tail],member(Head,Source),contains(Tail,Source).
 
