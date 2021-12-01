@@ -85,22 +85,32 @@ print_KB(KB):-
 
 
 start():-knowledge_base(KB),write("What would you like to eat?:"),nl,
-    read_word_list(In),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
-    select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write(Selected),nl,
+    read_word_list(In),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),
+    select_res(Categories,Nouns,Price,Mode,KB,Selected,Category),write("Do you want: "),write(Selected),nl,
     append(KB,[previous(Selected),nouns(Nouns),category(Category),mode(Mode),price(Price)],NewKB),
     write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
+start():-write("FAILED TO PARSE INPUT TRY AGAIN").
+%%%%Initiate debug mode
 
 %%%%%%%%%%%%%%
 %% Revision %%
 %%%%%%%%%%%%%%
 
 revision(In,KB):-In=[Head|_],Head=done.
+revision(In,KB):-In=[Head|_],Head=debug,write("Enter Debug Mode"),nl,write("INPUT: "),nl,read_word_list(NEWIN),revision_debug(NEWIN,KB).
+
+revision_debug(In,KB):-In=[Head|_],Head=done.
+
+revision_debug(In,KB):-In=[Head|_],Head=printkb,print_KB(KB),nl,
+    write("write new command"),nl,read_word_list(NEWIN),revision_debug(NEWIN,KB).
+revision_debug(In,KB):-In=[Head|_],Head=getprevious,findall(P,member(previous(P),KB),OS),write("OS: "),write(OS),nl,
+    write("write new command"),nl,read_word_list(NEWIN),revision_debug(NEWIN,KB).
 
 %%%For revision process normal then revise the categories,price,and mode checking for new information
 %%%Then combine the old and new nouns and make a recommendation
 %%(The nouns wont affect the category since we selected it in category revision and put it into the categories list)
 
-revision(In,KB):-
+revision_debug(In,KB):-
     write("Redo"),nl,print_KB(KB),extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),print(Categories,Mode,Price,Nouns),
     category_revision(KB,Nouns,Category,Categories),
     price_revision(KB,Price,NewPrice),
@@ -110,7 +120,25 @@ revision(In,KB):-
     select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write(Selected),
     append(OldSelections,[Selected],AllSelections),
     memoryrevision(AllNouns,MemoryNouns),
-    knowledge_base(KB2),append(KB2,[preious(AllSelections),nouns(MemoryNouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
+    knowledge_base(KB2),append(KB2,[previous(AllSelections),nouns(MemoryNouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
+    nl,write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision_debug(NEWIN,NewKB).
+
+    memoryrevision(Words,NewWords):-length_list(Count,0,Words),Count<7,NewWords = Words.
+    memoryrevision(Words,NewWords):-drop_last(Words,ShorterList),memoryrevision(ShorterList,NewWords).
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Non debug mode%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%
+revision(In,KB):-
+    extract_words(In,List),sort_words(List,Categories,Nouns,Price,Mode),
+    category_revision(KB,Nouns,Category,Categories),
+    price_revision(KB,Price,NewPrice),
+    mr(KB,Mode,NewMode),
+    findall(OS,member(previous(OS),KB),OldSelections),
+    findall(ON,member(nouns(ON),KB),[OldNouns]),append(Nouns,OldNouns,AllNouns),
+    select_res([Category],AllNouns,NewPrice,NewMode,KB,Selected,OutCategory,OldSelections),write("Do you want: "),write(Selected),write("?"),
+    append(OldSelections,[Selected],AllSelections),
+    memoryrevision(AllNouns,MemoryNouns),
+    knowledge_base(KB2),append(KB2,[previous(AllSelections),nouns(MemoryNouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
     nl,write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
     memoryrevision(Words,NewWords):-length_list(Count,0,Words),Count<7,NewWords = Words.
@@ -169,7 +197,7 @@ select_res(Categories,Nouns,Price,Mode,KB,Selected,Category,Previous):-
         Nouns=[],Options=List),
         priceloop(Price,KB,Options,Refined),
         modeloop(Mode,KB,Refined,Final),
-        (Nouns=[],Final=[Possibile|_];
+        (Nouns=[],Final=[Selected|_];
             \+Nouns=[],fc(KB,Final,Nouns,0,Choice,Possible)),check(Final,Previous,Possible,Selected).
 
 
@@ -404,7 +432,7 @@ knowledge_base([
     %%%%American food%%%%
     is(buffalowildwings,american),is(applebees,american),is(mcdonalds,american),is(rubytuesdays,american),is(chickfila,american),is(kfc,american),is(cheesecakefactory,american),is(texasroadhouse,american),
     %%%%%% Chinese %%%%%%
-    is(pfchangs,chisese),is(pandaexpress,chinese),is(chowcity,chinese),is(kq,chinese),
+    is(pfchangs,chinese),is(pandaexpress,chinese),is(chowcity,chinese),is(kq,chinese),
     %%%%% Japanese  %%%%%
     is(koto,japanese),is(kiyomi,japanese),is(snakebomb,japanese),is(oceansushi,japanese),is(ichiro,japanese),
     %%%%%  Italian  %%%%%
