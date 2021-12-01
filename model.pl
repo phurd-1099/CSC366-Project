@@ -141,7 +141,7 @@ revision(In,KB):-
     knowledge_base(KB2),append(KB2,[previous(AllSelections),nouns(MemoryNouns),category(Category),mode(NewMode),price(NewPrice)],NewKB),
     nl,write("If this is not what you want type a new statment else type done"),nl,read_word_list(NEWIN),revision(NEWIN,NewKB).
 
-    memoryrevision(Words,NewWords):-length_list(Count,0,Words),Count<7,NewWords = Words.
+    memoryrevision(Words,NewWords):-length_list(Count,0,Words),Count<8,NewWords = Words.
     memoryrevision(Words,NewWords):-drop_last(Words,ShorterList),memoryrevision(ShorterList,NewWords).
 
     
