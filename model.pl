@@ -445,9 +445,9 @@ knowledge_base([
     %%%%%%%%%%%%%%%%%%%%
 
     %%%% Expensive %%%%%
-    is(texasroadhouse,expensive),is(cheesecakefactory,expensive),is(pfchangs,expensive),
+    is(texasroadhouse,expensive),is(cheesecakefactory,expensive),is(pfchangs,expensive), is(snakebomb,expensive),
     %%% Normal Price %%%
-    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kq,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),is(rubytuesdays,normalprice),
+    is(buffalowildwings,normalprice),is(applebees,normalprice),is(chickfila,normalprice),is(pandaexpress,normalprice),is(kq,normalprice),is(kiyomi,normalprice),is(koto,normalprice),is(olivegarden,normalprice),is(chipotle,normalprice),is(carrabbas,normalprice),is(fajitagrill,normalprice),is(rubytuesdays,normalprice),is(chowcity,normalprice)
     %%%%%% Cheap %%%%%%%
     is(mcdonalds,cheap),is(kfc,cheap),
 
@@ -463,9 +463,9 @@ knowledge_base([
 
     has(buffalowildwings,wings),has(applebees,burger),has(mcdonalds,burger),has(rubytuesdays,steak),has(chickfila,chicken),has(kfc,chicken),has(texasroadhouse,steak),has(cheesecakefactory,beef),
 
-    has(pfchangs,dumplings),has(pandaexpress,noodles),has(chowcity,rice),has(pfchangs,rice),has(chowcity,noodles),has(kq,beef),has(kq,chicken),has(kq,noodles),
+    has(pfchangs,dumplings),has(pandaexpress,noodles),has(chowcity,rice),has(pfchangs,rice),has(chowcity,noodles),has(kq,beef),has(kq,chicken),has(kq,noodles),has(kq,noodles),
 
-    has(koto,rice),has(kiyomi,sushi),has(kiyomi,seafood),has(snakebomb,rice),has(snakebomb,sushi),has(oceansushi,sushi),has(ichiro,rice),
+    has(koto,rice),has(kiyomi,sushi),has(kiyomi,seafood),has(snakebomb,rice),has(snakebomb,sushi),has(snakebomb,seafood),has(oceansushi,sushi),has(ichiro,rice),
 
     has(olivegarden,pasta),has(carrabbas,pasta),has(bucadibeppo,pasta),has(pizzahut,pizza),has(dominos,pizza),
 
